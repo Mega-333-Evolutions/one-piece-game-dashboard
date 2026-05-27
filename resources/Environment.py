@@ -1,8 +1,12 @@
 import os
-from distutils.util import strtobool
 
 import constants as c
 
+# --- CUSTOM REPLACEMENT FOR DISTUTILS ---
+def strtobool(val):
+    """Convert a string representation of truth to True or False."""
+    return str(val).lower() in ("yes", "true", "t", "1", "on", "y")
+# ----------------------------------------
 
 class Environment:
     def __init__(self, name: str, default_value: str = None, can_be_empty: bool = False):
