@@ -15,7 +15,6 @@ class User(BaseModel):
     tg_first_name: str | CharField = CharField(max_length=99)
     tg_last_name: str | CharField = CharField(max_length=99)
     tg_username: str | CharField = CharField(max_length=99)
-    join_date: datetime.datetime | DateTimeField = DateTimeField(default=datetime.datetime.now)
     bounty: int | BigIntegerField = BigIntegerField(default=0)
     total_gained_bounty: int | BigIntegerField = BigIntegerField(
         default=0, constraints=[Check("total_gained_bounty >= 0")]
