@@ -36,4 +36,16 @@ class ImpelDownLog(BaseModel):
         db_table = 'impel_down_log'
 
 
-ImpelDownLog.create_table()
+def _ensure_impel_down_log_schema() -> None:
+    db = ImpelDownLog._meta.database
+    try:
+        cursor = db.execute_sql("SHOW COLUMNS FROM impel_down_log LIKE 'date_time'")
+        if not cursor.fetchall():
+            db.execute_sql('ALTER TABLE impel_down_log ADD COLUMN date_time DATETIME NULL')
+    except Exception:
+        # If the table doesn't exist yet or the DB does not support this check, ignore it.
+        pass
+
+
+ImpelDownLog.create_table(safe=True)
+_ensure_impel_down_log_schema()

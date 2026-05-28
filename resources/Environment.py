@@ -1,12 +1,56 @@
 import os
+from pathlib import Path
 
 import constants as c
+
+try:
+    import tomllib
+except ModuleNotFoundError:
+    import tomli as tomllib
 
 # --- CUSTOM REPLACEMENT FOR DISTUTILS ---
 def strtobool(val):
     """Convert a string representation of truth to True or False."""
     return str(val).lower() in ("yes", "true", "t", "1", "on", "y")
 # ----------------------------------------
+
+_secrets_cache: dict | None = None
+
+
+def _load_streamlit_secrets() -> dict:
+    global _secrets_cache
+    if _secrets_cache is not None:
+        return _secrets_cache
+
+    secrets_file = Path(__file__).resolve().parent.parent / '.streamlit' / 'secrets.toml'
+    if not secrets_file.exists():
+        _secrets_cache = {}
+        return _secrets_cache
+
+    try:
+        with secrets_file.open('rb') as file:
+            _secrets_cache = tomllib.load(file)
+    except Exception:
+        try:
+            text = secrets_file.read_text(encoding='utf-8')
+            parsed: dict[str, str] = {}
+            for line in text.splitlines():
+                line = line.strip()
+                if not line or line.startswith('#') or line.startswith('['):
+                    continue
+                if '=' not in line:
+                    continue
+                key, value = line.split('=', 1)
+                value = value.strip()
+                if (value.startswith('"') and value.endswith('"')) or (value.startswith("'") and value.endswith("'")):
+                    value = value[1:-1]
+                parsed[key.strip()] = value
+            _secrets_cache = parsed
+        except Exception:
+            _secrets_cache = {}
+
+    return _secrets_cache
+
 
 class Environment:
     def __init__(self, name: str, default_value: str = None, can_be_empty: bool = False):
@@ -20,12 +64,14 @@ class Environment:
         :return: The environment variable or None if it is not set
         :rtype: str | None
         """
-        # If default value is set, return the environment variable or the default value
-        if self.default_value is not None:
-            return os.environ.get(self.name, self.default_value)
+        secrets = _load_streamlit_secrets()
 
-        # Get the environment variable or return None if it is not set
-        value = os.environ.get(self.name)
+        # If default value is set, return the environment variable, secrets value, or the default value
+        if self.default_value is not None:
+            return os.environ.get(self.name, secrets.get(self.name, self.default_value))
+
+        # Get the environment variable or secret value, or return None if it is not set
+        value = os.environ.get(self.name, secrets.get(self.name))
 
         # If the environment variable is not set and the environment variable can be empty, return None
         if value is None and self.can_be_empty:

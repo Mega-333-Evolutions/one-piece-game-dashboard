@@ -27,4 +27,5 @@ class Database:
         self.db.close()
 
     def __del__(self):
-        self.close()
+        if hasattr(self, 'db'):
+            self.close()
