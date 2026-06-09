@@ -14,6 +14,12 @@ class DevilFruitAbilityType(IntEnum):
     PREDICTION_WAGER_REFUND = 6
     GIFT_LOAN_TAX = 7
     INCOME_TAX = 8
+    PLUNDER_COOLDOWN_DURATION = 9
+    PLUNDER_IMMUNITY_DURATION = 10
+    PLUNDER_SENTENCE_DURATION = 11
+    FIGHT_SCOUT_FEE = 12
+    PLUNDER_SCOUT_FEE = 13
+    GAME_GLOBAL_ACCEPT_COOLDOWN_DURATION = 14
 
     def get_description(self) -> str:
         """
@@ -34,7 +40,14 @@ class DevilFruitAbilityType(IntEnum):
                 DevilFruitAbilityType.FIGHT_IMMUNITY_DURATION.get_description(),
                 DevilFruitAbilityType.FIGHT_DEFENSE_BOOST.get_description(),
                 DevilFruitAbilityType.PREDICTION_WAGER_REFUND.get_description(),
-                DevilFruitAbilityType.GIFT_LOAN_TAX.get_description()]
+                DevilFruitAbilityType.GIFT_LOAN_TAX.get_description(),
+                DevilFruitAbilityType.INCOME_TAX.get_description(),
+                DevilFruitAbilityType.PLUNDER_COOLDOWN_DURATION.get_description(),
+                DevilFruitAbilityType.PLUNDER_IMMUNITY_DURATION.get_description(),
+                DevilFruitAbilityType.PLUNDER_SENTENCE_DURATION.get_description(),
+                DevilFruitAbilityType.FIGHT_SCOUT_FEE.get_description(),
+                DevilFruitAbilityType.PLUNDER_SCOUT_FEE.get_description(),
+                DevilFruitAbilityType.GAME_GLOBAL_ACCEPT_COOLDOWN_DURATION.get_description()]
 
     @staticmethod
     def get_by_description(description: str) -> 'DevilFruitAbilityType':
@@ -57,5 +70,12 @@ DEVIL_FRUIT_ABILITY_TYPE_DESCRIPTION_MAP = {
     DevilFruitAbilityType.FIGHT_IMMUNITY_DURATION: "Fight Immunity Duration",
     DevilFruitAbilityType.FIGHT_DEFENSE_BOOST: "Fight Defense Boost",
     DevilFruitAbilityType.PREDICTION_WAGER_REFUND: "Prediction Wager Refund",
-    DevilFruitAbilityType.GIFT_LOAN_TAX: "Tax"
+    DevilFruitAbilityType.GIFT_LOAN_TAX: "Tax",
+    DevilFruitAbilityType.INCOME_TAX: "Income Tax",
+    DevilFruitAbilityType.PLUNDER_COOLDOWN_DURATION: "Plunder Cooldown Duration",
+    DevilFruitAbilityType.PLUNDER_IMMUNITY_DURATION: "Plunder Immunity Duration",
+    DevilFruitAbilityType.PLUNDER_SENTENCE_DURATION: "Plunder Sentence Duration",
+    DevilFruitAbilityType.FIGHT_SCOUT_FEE: "Fight Scout Fee",
+    DevilFruitAbilityType.PLUNDER_SCOUT_FEE: "Plunder Scout Fee",
+    DevilFruitAbilityType.GAME_GLOBAL_ACCEPT_COOLDOWN_DURATION: "Game Global Accept Cooldown Duration"
 }
