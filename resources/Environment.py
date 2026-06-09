@@ -166,7 +166,7 @@ DEVIL_FRUIT_CATEGORY_ZOAN_SUM = Environment('DEVIL_FRUIT_CATEGORY_ZOAN_SUM', def
 # Devil Fruit Ancient Zoan abilities sum. Default: 150
 DEVIL_FRUIT_CATEGORY_ANCIENT_ZOAN_SUM = Environment('DEVIL_FRUIT_CATEGORY_ANCIENT_ZOAN_SUM', default_value='150')
 # Devil Fruit Mythical Zoan abilities sum. Default: 300
-DEVIL_FRUIT_CATEGORY_MYTHICAL_ZOAN_SUM = Environment('DEVIL_FRUIT_CATEGORY_MYTHICAL_ZOAN_SUM', default_value='300')
+DEVIL_FRUIT_CATEGORY_MYTHICAL_ZOAN_SUM = Environment('DEVIL_FRUIT_CATEGORY_MYTHICAL_ZOAN_SUM', default_value='400')
 
 # Maximum items displayed in a list. Default: 10
 MAX_ITEMS_DISPLAYED_LIST = Environment('MAX_ITEMS_DISPLAYED_LIST', default_value='5')
