@@ -114,7 +114,7 @@ def save(user: User, sentence_type: ImpelDownSentenceType, bounty_action: ImpelD
         impel_down_log.reason = reason if len(reason) > 0 else None
 
         user.save()
-        st.success("Saved")
+        impel_down_log.save()
 
         # Send notification message
         if should_send_message:
@@ -122,11 +122,19 @@ def save(user: User, sentence_type: ImpelDownSentenceType, bounty_action: ImpelD
                 release_date_time = datetime.combine(release_date, release_time)
             else:
                 release_date_time = None
-            notification = TgRestImpelDownNotification(user.id, sentence_type, release_date_time, bounty_action, reason)
+            notification = TgRestImpelDownNotification(
+                user.id,
+                sentence_type,
+                release_date_time,
+                bounty_action,
+                reason,
+                impel_down_log.id,
+            )
             send_tg_rest(notification)
             impel_down_log.message_sent = True
+            impel_down_log.save()
 
-        impel_down_log.save()
+        st.success("Saved")
 
     except ValidationException as ve:
         st.error(ve)

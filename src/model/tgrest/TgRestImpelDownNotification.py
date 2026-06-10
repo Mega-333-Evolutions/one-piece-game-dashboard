@@ -11,8 +11,15 @@ class TgRestImpelDownNotification(TgRest):
     TgRestImpelDownNotification class is used to create a Telegram REST API request.
     """
 
-    def __init__(self, user_id: int, sentence_type: ImpelDownSentenceType, release_date_time: datetime,
-                 bounty_action: ImpelDownBountyAction, reason: str):
+    def __init__(
+        self,
+        user_id: int,
+        sentence_type: ImpelDownSentenceType,
+        release_date_time: datetime,
+        bounty_action: ImpelDownBountyAction,
+        reason: str,
+        log_id: int,
+    ):
         """
         Constructor
 
@@ -21,12 +28,16 @@ class TgRestImpelDownNotification(TgRest):
         :param release_date_time: The release date time
         :param bounty_action: The bounty action
         :param reason: The reason
+        :param log_id: The impel down log id
         """
 
         super().__init__(TgRestObjectType.IMPEL_DOWN_NOTIFICATION)
 
         self.user_id: int = user_id
         self.sentence_type: ImpelDownSentenceType = sentence_type
-        self.release_date_time: datetime = release_date_time
+        self.release_date_time: str | None = (
+            release_date_time.strftime("%Y-%m-%d %H:%M:%S") if release_date_time else None
+        )
         self.bounty_action: ImpelDownBountyAction = bounty_action
         self.reason: str = reason
+        self.log_id: int = log_id
