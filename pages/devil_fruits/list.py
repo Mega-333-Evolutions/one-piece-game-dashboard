@@ -5,6 +5,7 @@ from pages.commons.util import select_user_select_box, get_selected_user
 from pages.devil_fruits.commons import show_and_get_abilities_multi_select, show_add_form, save
 from src.model.DevilFruit import DevilFruit
 from src.model.DevilFruitAbility import DevilFruitAbility
+from src.model.DevilFruitTrade import DevilFruitTrade
 from src.model.User import User
 from src.model.enums.devil_fruit.DevilFruitAbilityType import DevilFruitAbilityType
 from src.model.enums.devil_fruit.DevilFruitStatus import DevilFruitStatus
@@ -58,6 +59,12 @@ def main() -> None:
                 if submitted:
                     save(key_suffix_list, abilities_type_value_dict, devil_fruit=devil_fruit)
 
+            if status is DevilFruitStatus.SCHEDULED:
+                if st.button("Enable", key=f"enable{key_suffix_list}"):
+                    devil_fruit.status = DevilFruitStatus.ENABLED
+                    devil_fruit.save()
+                    st.success("Devil fruit enabled, refresh the page")
+
             # Show if status is new, completed or enabled
             if status in [DevilFruitStatus.NEW, DevilFruitStatus.COMPLETED, DevilFruitStatus.ENABLED]:
                 # Award to user section
@@ -87,5 +94,6 @@ def main() -> None:
                     if status not in [DevilFruitStatus.NEW, DevilFruitStatus.COMPLETED, DevilFruitStatus.ENABLED]:
                         st.error("Devil fruit is not in NEW, COMPLETED or ENABLED status")
                     else:
+                        DevilFruitTrade.delete().where(DevilFruitTrade.devil_fruit_id == devil_fruit.id).execute()
                         devil_fruit.delete_instance()
                         st.success("Devil fruit deleted, refresh the page")
