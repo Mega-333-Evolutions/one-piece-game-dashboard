@@ -1,7 +1,12 @@
+import time
+
 import requests
 
 import resources.Environment as Env
 from src.model.tgrest.TgRest import TgRest
+
+REQUEST_TIMEOUT_SECONDS = 30
+REQUEST_MAX_ATTEMPTS = 3
 
 
 class TgBotRequestException(Exception):
@@ -27,8 +32,20 @@ class TgBot:
             "text": "<code>" + tg_rest.get_as_json_string() + "</code>",
             "parse_mode": self.parse_mode
         }
-        response = requests.post(url, params)
-        if response.status_code != 200:
-            raise TgBotRequestException(f"Error: {response.text}")
 
-        return response
+        last_error: requests.RequestException | None = None
+        for attempt in range(REQUEST_MAX_ATTEMPTS):
+            try:
+                response = requests.post(url, params, timeout=REQUEST_TIMEOUT_SECONDS)
+                if response.status_code != 200:
+                    raise TgBotRequestException(f"Error: {response.text}")
+
+                return response
+            except TgBotRequestException:
+                raise
+            except requests.RequestException as e:
+                last_error = e
+                if attempt < REQUEST_MAX_ATTEMPTS - 1:
+                    time.sleep(1)
+
+        raise TgBotRequestException(f"Failed to connect to Telegram: {last_error}")
