@@ -173,3 +173,6 @@ MAX_ITEMS_DISPLAYED_LIST = Environment('MAX_ITEMS_DISPLAYED_LIST', default_value
 
 # Maximum number of Warlords. Default: 7
 MAX_WARLORDS = Environment('MAX_WARLORDS', default_value='7')
+
+# Maximum number of Legendary Pirates. Default: 20
+MAX_LEGENDARY_PIRATES = Environment('MAX_LEGENDARY_PIRATES', default_value='20')

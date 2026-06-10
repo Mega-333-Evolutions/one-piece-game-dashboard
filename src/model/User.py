@@ -123,5 +123,17 @@ class User(BaseModel):
 
         return self.warlords.where(Warlord.end_date > datetime.datetime.now()).count() > 0
 
+    def is_legendary_pirate(self) -> bool:
+        """
+        Returns True if the user is a Legendary Pirate
+        :return: True if the user is a Legendary Pirate
+        """
+        from src.model.LegendaryPirate import LegendaryPirate
+
+        now = datetime.datetime.now()
+        return self.legendary_pirates.where(
+            (LegendaryPirate.end_date.is_null()) | (LegendaryPirate.end_date > now)
+        ).count() > 0
+
 
 User.create_table()
