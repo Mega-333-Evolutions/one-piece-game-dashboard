@@ -128,8 +128,9 @@ class User(BaseModel):
         Returns True if the user is a Legendary Pirate
         :return: True if the user is a Legendary Pirate
         """
-        from src.model.LegendaryPirate import LegendaryPirate
+        from src.model.LegendaryPirate import LegendaryPirate, ensure_legendary_pirate_schema
 
+        ensure_legendary_pirate_schema()
         now = datetime.datetime.now()
         return self.legendary_pirates.where(
             (LegendaryPirate.end_date.is_null()) | (LegendaryPirate.end_date > now)

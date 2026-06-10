@@ -4,6 +4,9 @@ from streamlit_option_menu import option_menu
 import constants as c
 from pages.legendary_pirates.add import main as add_main
 from pages.legendary_pirates.list import main as list_main
+from src.model.LegendaryPirate import ensure_legendary_pirate_schema
+
+ensure_legendary_pirate_schema()
 
 
 def main():
