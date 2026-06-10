@@ -101,4 +101,28 @@ class LegendaryPirate(BaseModel):
         return self.end_date is None or self.end_date > datetime.datetime.now()
 
 
+def _ensure_legendary_pirate_schema() -> None:
+    db = LegendaryPirate._meta.database
+    columns = {
+        'end_date': 'ALTER TABLE legendary_pirate ADD COLUMN end_date DATETIME NULL',
+        'original_end_date': 'ALTER TABLE legendary_pirate ADD COLUMN original_end_date DATETIME NULL',
+        'revoke_reason': 'ALTER TABLE legendary_pirate ADD COLUMN revoke_reason VARCHAR(999) NULL',
+        'is_permanent': 'ALTER TABLE legendary_pirate ADD COLUMN is_permanent TINYINT(1) NOT NULL DEFAULT 0',
+    }
+
+    try:
+        for column_name, alter_sql in columns.items():
+            cursor = db.execute_sql(f"SHOW COLUMNS FROM legendary_pirate LIKE '{column_name}'")
+            if not cursor.fetchall():
+                db.execute_sql(alter_sql)
+
+        db.execute_sql(
+            'UPDATE legendary_pirate SET is_permanent = 1 '
+            'WHERE end_date IS NULL AND revoke_reason IS NULL AND is_permanent = 0'
+        )
+    except Exception:
+        pass
+
+
 LegendaryPirate.create_table(safe=True)
+_ensure_legendary_pirate_schema()
