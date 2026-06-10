@@ -10,6 +10,7 @@ from src.model.User import User
 from src.model.enums.devil_fruit.DevilFruitAbilityType import DevilFruitAbilityType
 from src.model.enums.devil_fruit.DevilFruitStatus import DevilFruitStatus
 from src.model.tgrest.TgRestDevilFruitAward import TgRestDevilFruitAward
+from src.model.tgrest.TgRestDevilFruitForceSchedule import TgRestDevilFruitForceSchedule
 from src.service.tg_rest_service import send_tg_rest
 
 
@@ -86,6 +87,12 @@ def main() -> None:
                             send_tg_rest(tg_rest_message)
 
                             st.success("Devil fruit awarded, refresh the page")
+
+                if status is DevilFruitStatus.ENABLED:
+                    st.subheader("Force Schedule")
+                    if st.button("Force Schedule", key=f"force_schedule{key_suffix_list}"):
+                        tg_rest_message = TgRestDevilFruitForceSchedule(devil_fruit.id)
+                        send_tg_rest(tg_rest_message, "Devil fruit scheduled for release, refresh the page")
 
                 # Delete button
                 st.subheader("Delete")
