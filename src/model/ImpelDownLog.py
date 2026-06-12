@@ -2,6 +2,7 @@ from datetime import datetime
 
 from peewee import *
 
+import resources.Environment as Env
 from src.model.BaseModel import BaseModel
 from src.model.User import User
 
@@ -10,13 +11,12 @@ class ImpelDownLog(BaseModel):
     """
     Impel Down Log class
     """
-    id = PrimaryKeyField()
+
     user = ForeignKeyField(
         User, backref="impel_down_users", on_delete="CASCADE", on_update="CASCADE"
     )
     sentence_type = CharField(max_length=99, null=True)
     source = CharField(max_length=10, null=True)
-    date_time = DateTimeField(default=datetime.now)
     release_date_time = DateTimeField(null=True)
     is_permanent = BooleanField(default=False)
     bounty_action = CharField(max_length=99, null=True)
@@ -33,19 +33,60 @@ class ImpelDownLog(BaseModel):
     )
 
     class Meta:
-        db_table = 'impel_down_log'
+        db_table = "impel_down_log"
+
+    @staticmethod
+    def get_current_for_user(user: User):
+        """
+        Get the current impel down log for the user
+        :param user: The user
+        :return: The impel down log
+        """
+        if not user.is_arrested():
+            return None
+
+        return (
+            ImpelDownLog.select()
+            .where(
+                (ImpelDownLog.user == user)
+                & (ImpelDownLog.is_reversed == False)
+                & (
+                    (ImpelDownLog.is_permanent == True)
+                    | (ImpelDownLog.release_date_time > datetime.now())
+                )
+                & (ImpelDownLog.bail_date.is_null())
+            )
+            .first()
+        )
+
+    def get_bail(self) -> int:
+        """
+        Calculate the bail cost based on the number of whole minutes remaining.
+
+        release_date_time is stored as a naive UTC datetime by both the bot and the
+        dashboard.  We strip tzinfo defensively so a timezone-aware value stored by
+        a future migration doesn't cause a TypeError.
+
+        :return: Bail amount in bounty
+        """
+        if self.release_date_time is None:
+            return 0
+
+        # Strip timezone info to ensure consistent naive-datetime arithmetic
+        release_dt = (
+            self.release_date_time.replace(tzinfo=None)
+            if self.release_date_time.tzinfo is not None
+            else self.release_date_time
+        )
+
+        remaining_seconds = (release_dt - datetime.now()).total_seconds()
+
+        # Floor to whole minutes — never return a negative bail
+        remaining_minutes = int(remaining_seconds // 60)
+        if remaining_minutes <= 0:
+            return 0
+
+        return remaining_minutes * Env.IMPEL_DOWN_BAIL_PER_MINUTE.get_int()
 
 
-def _ensure_impel_down_log_schema() -> None:
-    db = ImpelDownLog._meta.database
-    try:
-        cursor = db.execute_sql("SHOW COLUMNS FROM impel_down_log LIKE 'date_time'")
-        if not cursor.fetchall():
-            db.execute_sql('ALTER TABLE impel_down_log ADD COLUMN date_time DATETIME NULL')
-    except Exception:
-        # If the table doesn't exist yet or the DB does not support this check, ignore it.
-        pass
-
-
-ImpelDownLog.create_table(safe=True)
-_ensure_impel_down_log_schema()
+ImpelDownLog.create_table()
