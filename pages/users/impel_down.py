@@ -29,6 +29,8 @@ def main(user: User) -> None:
     :return:
     """
     key_suffix = "_impel_down"
+    sentence_radio_key = f"sentence_radio_{user.id}{key_suffix}"
+    quick_duration_key = f"quick_duration_{user.id}{key_suffix}"
 
     # Display arrested status
     if user.is_arrested():
@@ -41,84 +43,86 @@ def main(user: User) -> None:
         arrested_status_text = "Free"
     st.info(arrested_status_text)
 
-    # -------------------------------------------------------------------------
-    # Duration selector — OUTSIDE the form so Custom inputs appear immediately
-    # on selectbox change without needing to submit first.
-    # -------------------------------------------------------------------------
-    st.markdown("**Sentence Duration** *(only used for Temporary sentences)*")
+    # Sentence type radio — OUTSIDE the form so its value is immediately
+    # available in session_state to drive the conditional duration block.
+    if user.impel_down_is_permanent:
+        sentence_radio_index = 2
+    elif user.is_arrested():
+        sentence_radio_index = 1
+    else:
+        sentence_radio_index = 0
 
-    quick_label = st.selectbox(
-        "Quick select",
-        list(QUICK_DURATIONS.keys()),
-        index=5,  # default: "1 day"
-        key=f"quick_duration_{user.id}{key_suffix}",
-        help="Choose a preset duration, or pick Custom to enter days/hours/minutes manually.",
+    sentence_type_value = st.radio(
+        "Sentence",
+        [e for e in ImpelDownSentenceType],
+        index=sentence_radio_index,
+        key=sentence_radio_key,
     )
 
-    chosen_minutes = QUICK_DURATIONS[quick_label]
+    # -------------------------------------------------------------------------
+    # Duration selector — only shown when Temporary is selected.
+    # Also outside the form so Custom inputs appear instantly on selectbox change.
+    # -------------------------------------------------------------------------
+    total_duration_minutes = 0
 
-    if chosen_minutes is None:
-        # Custom duration: three side-by-side number inputs
-        col_days, col_hours, col_mins = st.columns(3)
-        duration_days = col_days.number_input(
-            "Days",
-            min_value=0,
-            max_value=365,
-            value=1,
-            step=1,
-            key=f"duration_days_{user.id}{key_suffix}",
-        )
-        duration_hours = col_hours.number_input(
-            "Hours",
-            min_value=0,
-            max_value=23,
-            value=0,
-            step=1,
-            key=f"duration_hours_{user.id}{key_suffix}",
-        )
-        duration_mins = col_mins.number_input(
-            "Minutes",
-            min_value=0,
-            max_value=59,
-            value=0,
-            step=1,
-            key=f"duration_minutes_{user.id}{key_suffix}",
-        )
-        total_duration_minutes = int(duration_days * 1440 + duration_hours * 60 + duration_mins)
-    else:
-        total_duration_minutes = chosen_minutes
+    if ImpelDownSentenceType(sentence_type_value) is ImpelDownSentenceType.TEMPORARY:
+        st.markdown("**Sentence Duration**")
 
-    # Live preview (also outside the form so it updates reactively)
-    if total_duration_minutes > 0:
-        preview_release = datetime.now() + timedelta(minutes=total_duration_minutes)
-        expected_bail = total_duration_minutes * 100_000
-        st.info(
-            f"⏱ Release at: **{preview_release.strftime('%Y-%m-%d %H:%M:%S')}**  \n"
-            f"💰 Max bail: **฿{expected_bail:,}** ({total_duration_minutes:,} min × ฿100,000)"
+        quick_label = st.selectbox(
+            "Quick select",
+            list(QUICK_DURATIONS.keys()),
+            index=5,  # default: "1 day"
+            key=quick_duration_key,
+            help="Choose a preset duration, or pick Custom to enter days/hours/minutes manually.",
         )
-    else:
-        st.warning("⚠️ Total duration is 0 — please set at least 1 minute.")
+
+        chosen_minutes = QUICK_DURATIONS[quick_label]
+
+        if chosen_minutes is None:
+            col_days, col_hours, col_mins = st.columns(3)
+            duration_days = col_days.number_input(
+                "Days",
+                min_value=0,
+                max_value=365,
+                value=1,
+                step=1,
+                key=f"duration_days_{user.id}{key_suffix}",
+            )
+            duration_hours = col_hours.number_input(
+                "Hours",
+                min_value=0,
+                max_value=23,
+                value=0,
+                step=1,
+                key=f"duration_hours_{user.id}{key_suffix}",
+            )
+            duration_mins = col_mins.number_input(
+                "Minutes",
+                min_value=0,
+                max_value=59,
+                value=0,
+                step=1,
+                key=f"duration_minutes_{user.id}{key_suffix}",
+            )
+            total_duration_minutes = int(duration_days * 1440 + duration_hours * 60 + duration_mins)
+        else:
+            total_duration_minutes = chosen_minutes
+
+        # Live preview
+        if total_duration_minutes > 0:
+            preview_release = datetime.now() + timedelta(minutes=total_duration_minutes)
+            expected_bail = total_duration_minutes * 100_000
+            st.info(
+                f"⏱ Release at: **{preview_release.strftime('%Y-%m-%d %H:%M:%S')}**  \n"
+                f"💰 Max bail: **฿{expected_bail:,}** ({total_duration_minutes:,} min × ฿100,000)"
+            )
+        else:
+            st.warning("⚠️ Total duration is 0 — please set at least 1 minute.")
 
     # -------------------------------------------------------------------------
-    # Rest of the form (sentence type, bounty action, reason, save button)
+    # Rest of the form (bounty action, reason, save button)
     # -------------------------------------------------------------------------
     with st.form(f"impel_down_form_{user.id}{key_suffix}"):
-        # Sentence type radio
-        if user.impel_down_is_permanent:
-            sentence_radio_index = 2
-        elif user.is_arrested():
-            sentence_radio_index = 1
-        else:
-            sentence_radio_index = 0
-
-        sentence_type = st.radio(
-            "Sentence",
-            [e for e in ImpelDownSentenceType],
-            index=sentence_radio_index,
-            key=f"sentence_radio_{user.id}{key_suffix}",
-        )
-
-        # Bounty action radio
         bounty_action = st.radio(
             "Bounty action",
             [e for e in ImpelDownBountyAction],
@@ -126,20 +130,25 @@ def main(user: User) -> None:
             key=f"bounty_action_{user.id}{key_suffix}",
         )
 
-        # Send message checkbox
         # should_send_message = st.checkbox("Send message", key=f"send_message_{user.id}{key_suffix}")
         should_send_message = True  # Always send message
 
-        # Reason input
         reason = st.text_input("Reason", key=f"reason_{user.id}{key_suffix}")
 
-        # Save button
         submitted = st.form_submit_button("Save")
 
         if submitted:
+            # Read sentence_type and duration from session_state since they
+            # live outside this form.
+            sentence_type = ImpelDownSentenceType(
+                st.session_state.get(sentence_radio_key, sentence_type_value)
+            )
+            duration = st.session_state.get(
+                f"_total_duration_{user.id}{key_suffix}", total_duration_minutes
+            )
             save(
                 user,
-                ImpelDownSentenceType(sentence_type),
+                sentence_type,
                 ImpelDownBountyAction(bounty_action),
                 total_duration_minutes,
                 should_send_message,
@@ -203,12 +212,11 @@ def save(
         user.save()
         impel_down_log.save()
 
-        # Send notification message
         if should_send_message:
             notification = TgRestImpelDownNotification(
                 user.id,
                 sentence_type,
-                user.impel_down_release_date,  # already a datetime or None
+                user.impel_down_release_date,
                 bounty_action,
                 reason,
                 impel_down_log.id,
