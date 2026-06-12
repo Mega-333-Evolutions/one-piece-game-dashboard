@@ -10,7 +10,7 @@ from src.model.exceptions.ValidationException import ValidationException
 from src.model.tgrest.TgRestImpelDownNotification import TgRestImpelDownNotification
 from src.service.tg_rest_service import send_tg_rest
 
-# Quick-select durations (label -> total minutes)
+# Quick-select durations (label -> total minutes). None = show custom inputs.
 QUICK_DURATIONS = {
     "Custom": None,
     "30 minutes": 30,
@@ -41,7 +41,67 @@ def main(user: User) -> None:
         arrested_status_text = "Free"
     st.info(arrested_status_text)
 
-    # Impel down status form
+    # -------------------------------------------------------------------------
+    # Duration selector — OUTSIDE the form so Custom inputs appear immediately
+    # on selectbox change without needing to submit first.
+    # -------------------------------------------------------------------------
+    st.markdown("**Sentence Duration** *(only used for Temporary sentences)*")
+
+    quick_label = st.selectbox(
+        "Quick select",
+        list(QUICK_DURATIONS.keys()),
+        index=5,  # default: "1 day"
+        key=f"quick_duration_{user.id}{key_suffix}",
+        help="Choose a preset duration, or pick Custom to enter days/hours/minutes manually.",
+    )
+
+    chosen_minutes = QUICK_DURATIONS[quick_label]
+
+    if chosen_minutes is None:
+        # Custom duration: three side-by-side number inputs
+        col_days, col_hours, col_mins = st.columns(3)
+        duration_days = col_days.number_input(
+            "Days",
+            min_value=0,
+            max_value=365,
+            value=1,
+            step=1,
+            key=f"duration_days_{user.id}{key_suffix}",
+        )
+        duration_hours = col_hours.number_input(
+            "Hours",
+            min_value=0,
+            max_value=23,
+            value=0,
+            step=1,
+            key=f"duration_hours_{user.id}{key_suffix}",
+        )
+        duration_mins = col_mins.number_input(
+            "Minutes",
+            min_value=0,
+            max_value=59,
+            value=0,
+            step=1,
+            key=f"duration_minutes_{user.id}{key_suffix}",
+        )
+        total_duration_minutes = int(duration_days * 1440 + duration_hours * 60 + duration_mins)
+    else:
+        total_duration_minutes = chosen_minutes
+
+    # Live preview (also outside the form so it updates reactively)
+    if total_duration_minutes > 0:
+        preview_release = datetime.now() + timedelta(minutes=total_duration_minutes)
+        expected_bail = total_duration_minutes * 100_000
+        st.info(
+            f"⏱ Release at: **{preview_release.strftime('%Y-%m-%d %H:%M:%S')}**  \n"
+            f"💰 Max bail: **฿{expected_bail:,}** ({total_duration_minutes:,} min × ฿100,000)"
+        )
+    else:
+        st.warning("⚠️ Total duration is 0 — please set at least 1 minute.")
+
+    # -------------------------------------------------------------------------
+    # Rest of the form (sentence type, bounty action, reason, save button)
+    # -------------------------------------------------------------------------
     with st.form(f"impel_down_form_{user.id}{key_suffix}"):
         # Sentence type radio
         if user.impel_down_is_permanent:
@@ -57,65 +117,6 @@ def main(user: User) -> None:
             index=sentence_radio_index,
             key=f"sentence_radio_{user.id}{key_suffix}",
         )
-
-        # --- Duration input (replaces raw date+time pickers) ---
-        st.markdown("**Sentence Duration** *(only used for Temporary sentences)*")
-
-        quick_label = st.selectbox(
-            "Quick select",
-            list(QUICK_DURATIONS.keys()),
-            index=5,  # default: "1 day"
-            key=f"quick_duration_{user.id}{key_suffix}",
-            help="Choose a preset duration or pick Custom to enter days/hours/minutes manually.",
-        )
-
-        chosen_minutes = QUICK_DURATIONS[quick_label]
-
-        if chosen_minutes is None:
-            # Custom duration: separate day / hour / minute inputs
-            col_days, col_hours, col_mins = st.columns(3)
-            duration_days = col_days.number_input(
-                "Days",
-                min_value=0,
-                max_value=365,
-                value=1,
-                step=1,
-                key=f"duration_days_{user.id}{key_suffix}",
-            )
-            duration_hours = col_hours.number_input(
-                "Hours",
-                min_value=0,
-                max_value=23,
-                value=0,
-                step=1,
-                key=f"duration_hours_{user.id}{key_suffix}",
-            )
-            duration_mins = col_mins.number_input(
-                "Minutes",
-                min_value=0,
-                max_value=59,
-                value=0,
-                step=1,
-                key=f"duration_minutes_{user.id}{key_suffix}",
-            )
-            total_duration_minutes = int(duration_days * 1440 + duration_hours * 60 + duration_mins)
-        else:
-            total_duration_minutes = chosen_minutes
-            duration_days = total_duration_minutes // 1440
-            duration_hours = (total_duration_minutes % 1440) // 60
-            duration_mins = total_duration_minutes % 60
-
-        # Preview the computed release datetime so the admin can verify before saving
-        if ImpelDownSentenceType(sentence_type) is ImpelDownSentenceType.TEMPORARY:
-            if total_duration_minutes > 0:
-                preview_release = datetime.now() + timedelta(minutes=total_duration_minutes)
-                expected_bail = total_duration_minutes * 100_000  # IMPEL_DOWN_BAIL_PER_MINUTE
-                st.info(
-                    f"⏱ Release at: **{preview_release.strftime('%Y-%m-%d %H:%M:%S')}**  \n"
-                    f"💰 Max bail: **฿{expected_bail:,}** ({total_duration_minutes:,} min × ฿100,000)"
-                )
-            else:
-                st.warning("⚠️ Total duration is 0 — please set at least 1 minute.")
 
         # Bounty action radio
         bounty_action = st.radio(
@@ -166,13 +167,11 @@ def save(
     :return:
     """
     try:
-        # Validation
         validate(sentence_type, duration_minutes, should_send_message, reason)
 
         impel_down_log: ImpelDownLog = ImpelDownLog()
         impel_down_log.user = user
 
-        # Save
         user.impel_down_is_permanent = sentence_type is ImpelDownSentenceType.PERMANENT
         impel_down_log.sentence_type = (
             sentence_type if sentence_type is not ImpelDownSentenceType.NONE else None
@@ -183,7 +182,7 @@ def save(
             if sentence_type is ImpelDownSentenceType.PERMANENT:
                 impel_down_log.is_permanent = True
         else:
-            # Compute release_date_time from duration so 1 day = exactly 1440 minutes
+            # Compute release_date_time from duration — 1 day = exactly 1440 minutes from now
             release_date_time = datetime.now() + timedelta(minutes=duration_minutes)
             user.impel_down_release_date = release_date_time
             impel_down_log.release_date_time = release_date_time
