@@ -132,7 +132,7 @@ TG_REST_CHANNEL_ID = Environment('TG_REST_CHANNEL_ID')
 
 # CONFIG
 # Which timezone to use
-TZ = Environment('TZ', default_value='Etc/UTC')
+TZ = Environment('TZ', default_value='Asia/Kolkata')
 
 # DATABASE
 # Database name
