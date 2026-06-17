@@ -1,7 +1,9 @@
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 import streamlit as st
 
+import resources.Environment as Env
 from src.model.ImpelDownLog import ImpelDownLog
 from src.model.User import User
 from src.model.enums.impel_down.ImpelDownBountyAction import ImpelDownBountyAction
@@ -21,6 +23,20 @@ QUICK_DURATIONS = {
     "3 days": 4320,
     "7 days": 10080,
 }
+
+
+def _now() -> datetime:
+    """
+    Returns the current datetime in the game's configured timezone (Env.TZ),
+    as a NAIVE datetime (no tzinfo). This matches exactly what the bot produces
+    via os.environ["TZ"] = "Asia/Kolkata" + time.tzset() + datetime.now().
+
+    Using raw datetime.now() in the dashboard would return UTC (the dashboard
+    process does not call time.tzset()), causing release_date_time to be stored
+    5h 30m behind IST, and bail to be undercharged by 330 minutes × ฿100,000.
+    """
+    tz = ZoneInfo(Env.TZ.get())
+    return datetime.now(tz).replace(tzinfo=None)
 
 
 def main(user: User) -> None:
@@ -108,13 +124,15 @@ def main(user: User) -> None:
         else:
             total_duration_minutes = chosen_minutes
 
-        # Live preview
+        # Live preview — uses _now() so the displayed release time matches
+        # exactly what will be stored (IST, same as the bot).
         if total_duration_minutes > 0:
-            preview_release = datetime.now() + timedelta(minutes=total_duration_minutes)
-            expected_bail = total_duration_minutes * 100_000
+            preview_release = _now() + timedelta(minutes=total_duration_minutes)
+            bail_per_minute = Env.IMPEL_DOWN_BAIL_PER_MINUTE.get_int()
+            expected_bail = total_duration_minutes * bail_per_minute
             st.info(
                 f"⏱ Release at: **{preview_release.strftime('%Y-%m-%d %H:%M:%S')}**  \n"
-                f"💰 Max bail: **฿{expected_bail:,}** ({total_duration_minutes:,} min × ฿100,000)"
+                f"💰 Max bail: **฿{expected_bail:,}** ({total_duration_minutes:,} min × ฿{bail_per_minute:,})"
             )
         else:
             st.warning("⚠️ Total duration is 0 — please set at least 1 minute.")
@@ -130,7 +148,6 @@ def main(user: User) -> None:
             key=f"bounty_action_{user.id}{key_suffix}",
         )
 
-        # should_send_message = st.checkbox("Send message", key=f"send_message_{user.id}{key_suffix}")
         should_send_message = True  # Always send message
 
         reason = st.text_input("Reason", key=f"reason_{user.id}{key_suffix}")
@@ -138,13 +155,8 @@ def main(user: User) -> None:
         submitted = st.form_submit_button("Save")
 
         if submitted:
-            # Read sentence_type and duration from session_state since they
-            # live outside this form.
             sentence_type = ImpelDownSentenceType(
                 st.session_state.get(sentence_radio_key, sentence_type_value)
-            )
-            duration = st.session_state.get(
-                f"_total_duration_{user.id}{key_suffix}", total_duration_minutes
             )
             save(
                 user,
@@ -191,8 +203,11 @@ def save(
             if sentence_type is ImpelDownSentenceType.PERMANENT:
                 impel_down_log.is_permanent = True
         else:
-            # Compute release_date_time from duration — 1 day = exactly 1440 minutes from now
-            release_date_time = datetime.now() + timedelta(minutes=duration_minutes)
+            # Use _now() (IST) so the stored timestamp matches the bot's datetime.now()
+            # which also runs in IST after os.environ["TZ"] = "Asia/Kolkata" + time.tzset().
+            # Using plain datetime.now() here returns UTC (dashboard process has no tzset),
+            # which causes bail to be undercharged by 330 min × ฿100,000 = ฿33,000,000.
+            release_date_time = _now() + timedelta(minutes=duration_minutes)
             user.impel_down_release_date = release_date_time
             impel_down_log.release_date_time = release_date_time
 
