@@ -128,7 +128,10 @@ def main(user: User) -> None:
         # exactly what will be stored (IST, same as the bot).
         if total_duration_minutes > 0:
             preview_release = _now() + timedelta(minutes=total_duration_minutes)
-            bail_per_minute = Env.IMPEL_DOWN_BAIL_PER_MINUTE.get_int()
+            # NOTE: kept in sync manually with the bot's IMPEL_DOWN_BAIL_PER_MINUTE env var.
+            # The dashboard's Environment.py does not define this constant, so it can't be
+            # read directly here — update this value if the bot's env var ever changes.
+            bail_per_minute = 100_000
             expected_bail = total_duration_minutes * bail_per_minute
             st.info(
                 f"⏱ Release at: **{preview_release.strftime('%Y-%m-%d %H:%M:%S')}**  \n"
