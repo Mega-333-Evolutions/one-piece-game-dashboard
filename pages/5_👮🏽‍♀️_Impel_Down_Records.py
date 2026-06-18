@@ -40,11 +40,6 @@ def main():
             if log.reason is not None:
                 col0.info(log.reason)
 
-            # Date (if applicable)
-            if log.date_time is not None:
-                col_1.text_input("Date", value=log.date_time, disabled=True,
-                                 key=f"date{key_suffix}{index}")
-
             # Sentence type and release datetime (if applicable)
             if log.sentence_type is not None:
                 col_1.text_input("Sentence Type", value=log.sentence_type, disabled=True,
